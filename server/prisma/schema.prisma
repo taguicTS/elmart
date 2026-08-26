@@ -1,0 +1,257 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CUSTOMER
+  VENDOR
+  ADMIN
+}
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  EXPIRED
+  FAILED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+// ------------------------------------------------------------
+// USER & PROFILE
+// ------------------------------------------------------------
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  password  String
+  role      Role     @default(CUSTOMER)
+  profile       Profile?
+  vendor        Vendor?
+  cart          Cart?
+  orders        Order[]
+  notifications Notification[]
+  conversations Conversation[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("users")
+}
+
+model Profile {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  name      String
+  phone     String?
+  avatar    String?
+  address   String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("profiles")
+}
+
+// ------------------------------------------------------------
+// VENDOR
+// ------------------------------------------------------------
+
+model Vendor {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  storeName String   @map("store_name")
+  slug      String   @unique
+  xenditAccountNumber String? @map("xendit_account_number")
+  owner    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products Product[]
+  payouts  Payout[]
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("vendors")
+}
+
+// ------------------------------------------------------------
+// CATALOG
+// ------------------------------------------------------------
+
+model Category {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id         String        @id @default(uuid()) @db.Uuid
+  vendorId   String        @map("vendor_id") @db.Uuid
+  categoryId String        @map("category_id") @db.Uuid
+  name       String
+  price      Decimal       @db.Decimal(12, 2)
+  stock      Int           @default(0)
+  status     ProductStatus @default(DRAFT)
+  vendor     Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category   Category    @relation(fields: [categoryId], references: [id])
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+  @@map("products")
+}
+
+// ------------------------------------------------------------
+// CART
+// ------------------------------------------------------------
+
+model Cart {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+  @@map("carts")
+}
+
+model CartItem {
+  id        String @id @default(uuid()) @db.Uuid
+  cartId    String @map("cart_id") @db.Uuid
+  productId String @map("product_id") @db.Uuid
+  quantity  Int    @default(1)
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  @@unique([cartId, productId])
+  @@map("cart_items")
+}
+
+// ------------------------------------------------------------
+// ORDERS
+// ------------------------------------------------------------
+
+model Order {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @map("user_id") @db.Uuid
+  total     Decimal     @db.Decimal(12, 2)
+  status    OrderStatus @default(PENDING)
+  user    User        @relation(fields: [userId], references: [id])
+  items   OrderItem[]
+  payment Payment?
+
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid()) @db.Uuid
+  orderId   String  @map("order_id") @db.Uuid
+  vendorId  String  @map("vendor_id") @db.Uuid
+  productId String  @map("product_id") @db.Uuid
+  price     Decimal @db.Decimal(12, 2) // snapshot
+  quantity  Int
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendor  Vendor  @relation(fields: [vendorId], references: [id])
+
+  product Product @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("order_items")
+}
+
+// ------------------------------------------------------------
+// PAYMENT (XENDIT) & PAYOUT
+// ------------------------------------------------------------
+
+model Payment {
+  id              String        @id @default(uuid()) @db.Uuid
+  orderId         String        @unique @map("order_id") @db.Uuid
+  xenditInvoiceId String?       @unique @map("xendit_invoice_id")
+  status          PaymentStatus @default(PENDING)
+  amount          Decimal       @db.Decimal(12, 2)
+  paidAt          DateTime?     @map("paid_at")
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  @@map("payments")
+}
+
+model Payout {
+  id        String        @id @default(uuid()) @db.Uuid
+  vendorId  String        @map("vendor_id") @db.Uuid
+  amount    Decimal       @db.Decimal(12, 2)
+  status    PaymentStatus @default(PENDING)
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  @@map("payouts")
+}
+
+// ------------------------------------------------------------
+// NOTIFICATIONS
+// ------------------------------------------------------------
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("notifications")  
+}
+
+// ------------------------------------------------------------
+// AI SUPPORT CHAT
+// ------------------------------------------------------------
+
+model Conversation {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("conversations")
+}
+
+model Message {
+  id             String      @id @default(uuid()) @db.Uuid
+  conversationId String      @map("conversation_id") @db.Uuid
+  role           MessageRole
+  content        String
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime    @default(now()) @map("created_at")
+  @@map("messages")
+}

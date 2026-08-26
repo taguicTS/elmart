@@ -1,0 +1,45 @@
+Here's a quick reference of each table and its fields:
+
+users
+id, email, password, role, created_at, updated_at
+
+profiles
+id, user_id, name, phone, avatar, address, created_at, updated_at
+
+vendors
+id, user_id, store_name, slug, xendit_account_number, created_at, updated_at
+
+categories
+id, name
+
+products
+id, vendor_id, category_id, name, price, stock, status, created_at, updated_at
+
+carts
+id, user_id
+
+cart_items
+id, cart_id, product_id, quantity
+
+orders
+id, user_id, total, status, created_at, updated_at
+
+order_items
+id, order_id, vendor_id, product_id, price, quantity, created_at
+
+payments
+id, order_id, xendit_invoice_id, status, amount, paid_at, created_at, updated_at
+
+payouts
+id, vendor_id, amount, status, created_at, updated_at
+
+notifications
+id, user_id, title, message, is_read, created_at
+
+conversations
+id, user_id, created_at, updated_at
+
+messages
+id, conversation_id, role, content, created_at
+
+Note: id fields are UUIDs, *_id fields are foreign keys, and fields not listed here (like relations user, products, items) are Prisma-only relation fields — they don't create columns in the actual database table.
