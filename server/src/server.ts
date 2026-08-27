@@ -7,6 +7,7 @@ import cors from "cors";
 import { env } from "src/configs/env";
 import { notFoundHandler } from "./middelwares/not-found-middleware";
 import { errorHandler } from "./middelwares/error-middleware";
+import mainRouter from "./modules/routes";
 
 const PORT = env.PORT;
 
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/health", (req: Request, res: Response, next: NextFunction) => res.json({ message: "Server is healthy" }));
+app.use("/api/v1", mainRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

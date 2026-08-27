@@ -48,12 +48,14 @@ model User {
   email     String   @unique
   password  String
   role      Role     @default(CUSTOMER)
+  isVerified Boolean @default(false) @map("is_verified")
   profile       Profile?
   vendor        Vendor?
   cart          Cart?
   orders        Order[]
   notifications Notification[]
   conversations Conversation[]
+  verifications VerificationToken[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -73,6 +75,20 @@ model Profile {
   updatedAt DateTime @updatedAt @map("updated_at")
   @@map("profiles")
 }
+
+  
+model VerificationToken {
+  id        String     @id @default(uuid()) @db.Uuid
+  userId    String     @db.Uuid @map("user_id")
+  user      User      @relation(fields: [userId],references: [id], onDelete: Cascade)
+  token     String     @unique
+  expiresAt DateTime?  @map("expires_at")
+
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  @@map("verification_tokens")
+}
+
 
 // ------------------------------------------------------------
 // VENDOR

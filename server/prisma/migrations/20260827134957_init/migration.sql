@@ -40,6 +40,18 @@ CREATE TABLE "profiles" (
 );
 
 -- CreateTable
+CREATE TABLE "verification_tokens" (
+    "id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
+    "token" TEXT NOT NULL,
+    "expires_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "verification_tokens_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "vendors" (
     "id" UUID NOT NULL,
     "user_id" UUID NOT NULL,
@@ -186,6 +198,9 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 CREATE UNIQUE INDEX "profiles_user_id_key" ON "profiles"("user_id");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "verification_tokens_token_key" ON "verification_tokens"("token");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "vendors_user_id_key" ON "vendors"("user_id");
 
 -- CreateIndex
@@ -208,6 +223,9 @@ CREATE UNIQUE INDEX "payments_xendit_invoice_id_key" ON "payments"("xendit_invoi
 
 -- AddForeignKey
 ALTER TABLE "profiles" ADD CONSTRAINT "profiles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "verification_tokens" ADD CONSTRAINT "verification_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "vendors" ADD CONSTRAINT "vendors_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
